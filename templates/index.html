@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Assistant | RAG & Grok</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-indigo-600 rounded-lg text-white">
+                    <i data-lucide="bot" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-none">RAG Study Assistant</h1>
+                    <p class="text-xs text-slate-400 mt-1">Powered by FastAPI, ChromaDB & Grok AI</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-xs bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-slate-300 font-medium">System Ready</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto px-4 py-8 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Column: Document Upload Section (4 Cols) -->
+        <section class="lg:col-span-4 space-y-6">
+            <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-6 shadow-xl">
+                <div class="flex items-center space-x-2 mb-4">
+                    <i data-lucide="file-text" class="w-5 h-5 text-indigo-400"></i>
+                    <h2 class="font-semibold text-slate-200">Upload PDF Chapters</h2>
+                </div>
+
+                <!-- PDF Upload Form -->
+                <form action="/upload" method="post" enctype="multipart/form-data" class="space-y-4">
+                    <div class="border-2 border-dashed border-slate-600 hover:border-indigo-500 rounded-xl p-6 text-center cursor-pointer transition bg-slate-900/40 relative group">
+                        <input type="file" name="files" multiple accept=".pdf" required 
+                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                               onchange="updateFileName(this)">
+                        <i data-lucide="upload-cloud" class="w-10 h-10 mx-auto text-slate-400 group-hover:text-indigo-400 transition mb-2"></i>
+                        <p class="text-sm text-slate-300 font-medium" id="file-label">Choose PDF files</p>
+                        <p class="text-xs text-slate-500 mt-1">Multiple files supported</p>
+                    </div>
+
+                    <button type="submit" 
+                            class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-xl transition flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/20">
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                        <span>Process & Index PDFs</span>
+                    </button>
+                </form>
+
+                <!-- Processing Status -->
+                {% if status %}
+                <div class="mt-4 p-3.5 rounded-xl text-xs font-medium border {% if 'Error' in status %}bg-red-500/10 border-red-500/30 text-red-400{% else %}bg-emerald-500/10 border-emerald-500/30 text-emerald-400{% endif %} flex items-start space-x-2">
+                    <i data-lucide="{% if 'Error' in status %}alert-circle{% else %}check-circle-2{% endif %}" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                    <span>{{ status }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- How it works card -->
+            <div class="bg-slate-800/20 border border-slate-700/40 rounded-2xl p-5 text-xs text-slate-400 space-y-2">
+                <p class="font-semibold text-slate-300 flex items-center gap-1.5">
+                    <i data-lucide="info" class="w-4 h-4 text-indigo-400"></i> How this works
+                </p>
+                <ol class="list-decimal list-inside space-y-1 text-slate-400">
+                    <li>Upload your Python PDF textbooks.</li>
+                    <li>FastEmbed converts text to vector embeddings.</li>
+                    <li>Chunks are stored in local ChromaDB.</li>
+                    <li>Grok LLM retrieves relevant contexts & answers!</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Right Column: Q&A Section (8 Cols) -->
+        <section class="lg:col-span-8 space-y-6">
+            
+            <!-- Question Input Box -->
+            <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-6 shadow-xl">
+                <form action="/ask" method="post" class="space-y-4">
+                    <label class="block text-sm font-medium text-slate-200">Ask a Question from your Documents</label>
+                    <div class="relative">
+                        <textarea name="question" rows="3" required placeholder="e.g., What are list comprehensions in Python and how do they work?" 
+                                  class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-4 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-sm"></textarea>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 px-6 rounded-xl transition flex items-center space-x-2 shadow-lg shadow-emerald-600/20">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>Ask Assistant</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Display Question and Answer -->
+            {% if question %}
+            <div class="space-y-6">
+                <!-- User Question -->
+                <div class="bg-indigo-950/40 border border-indigo-800/50 rounded-2xl p-5">
+                    <div class="flex items-center space-x-2 text-indigo-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                        <span>Your Question</span>
+                    </div>
+                    <p class="text-slate-200 text-sm font-medium">{{ question }}</p>
+                </div>
+
+                <!-- AI Answer -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl space-y-3">
+                    <div class="flex items-center space-x-2 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+                        <i data-lucide="bot" class="w-4 h-4"></i>
+                        <span>Grok Answer</span>
+                    </div>
+                    <div class="prose prose-invert max-w-none text-slate-200 text-sm leading-relaxed whitespace-pre-line">
+                        {{ answer }}
+                    </div>
+                </div>
+
+                <!-- Retrieved RAG Context Accordion -->
+                {% if context %}
+                <details class="group bg-slate-800/30 border border-slate-700/40 rounded-2xl overflow-hidden transition">
+                    <summary class="flex justify-between items-center p-4 cursor-pointer text-xs font-medium text-slate-400 hover:text-slate-200 select-none">
+                        <span class="flex items-center space-x-2">
+                            <i data-lucide="database" class="w-4 h-4 text-indigo-400"></i>
+                            <span>View Retrieved Context Chunks (ChromaDB)</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div class="p-4 bg-slate-900/60 border-t border-slate-800 text-xs text-slate-400 font-mono whitespace-pre-wrap max-h-60 overflow-y-auto">
+                        {{ context }}
+                    </div>
+                </details>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+        AI Study Assistant — Built with FastAPI, ChromaDB & Grok
+    </footer>
+
+    <!-- Initialize Lucide Icons & JS -->
+    <script>
+        lucide.createIcons();
+
+        function updateFileName(input) {
+            const label = document.getElementById('file-label');
+            if (input.files.length > 0) {
+                label.innerText = `${input.files.length} file(s) selected`;
+            } else {
+                label.innerText = 'Choose PDF files';
+            }
+        }
+    </script>
+</body>
+</html>

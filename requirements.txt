@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+jinja2
+python-multipart
+pypdf
+langchain-community
+langchain-text-splitters
+fastembed
+chromadb
+openai
+python-dotenv
+fastembed 
+fastapi 
+uvicorn 
+jinja2
